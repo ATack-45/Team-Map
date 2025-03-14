@@ -35,13 +35,34 @@ function initApp() {
     downloadBtn.addEventListener('click', downloadMapImage);
     
     // Load the Google API client library
-    loadGoogleApiClient();
+    gapiLoaded = setInterval(() => {
+        if (typeof gapi !== 'undefined') {
+            clearInterval(gapiLoaded);
+            loadGoogleApiClient();
+        }
+    }, 100);
 }
 
 function loadGoogleApiClient() {
-    // Load the Google API client library
-    gapi.load('client:auth2', initClient);
+    if (typeof gapi === 'undefined') {
+        console.error("gapi is not loaded yet.");
+        return;
+    }
+
+    gapi.load('client:auth2', function() {
+        console.log('Google API client loaded');
+        // Initialize client with API key and Client ID
+        gapi.client.init({
+            apiKey: API_KEY,
+            clientId: CLIENT_ID,
+            discoveryDocs: ["https://www.googleapis.com/discovery/v1/apis/youtube/v3/rest"],
+            scope: "https://www.googleapis.com/auth/youtube.force-ssl"
+        }).then(() => {
+            console.log('Google API initialized');
+        }).catch(err => console.error('Error initializing gapi:', err));
+    });
 }
+
 
 function initClient() {
     // Initialize the Google API client library
