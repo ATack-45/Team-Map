@@ -418,7 +418,7 @@ function downloadMapImage() {
 
     // Add markers to the map URL
     markers.forEach(marker => {
-        url += `&markers==icon:https://maps.google.com/mapfiles/ms/icons/red-dot.png|size:tiny|${marker.position.lat()},${marker.position.lng()}`;
+        url += `&markers=icon:https://maps.google.com/mapfiles/ms/icons/red-dot.png|size:tiny|${marker.position.lat()},${marker.position.lng()}`;
     });
 
     // Add your API key at the end of the URL
