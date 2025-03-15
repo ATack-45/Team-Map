@@ -329,6 +329,7 @@ function geocodeLocations(teams) {
     });
     return Promise.all(geocodePromises);
 }
+
 function displayMap(teams, mapTitle) {
     if (!mapInitialized) {
         map = new google.maps.Map(document.getElementById('map'), {
@@ -338,44 +339,30 @@ function displayMap(teams, mapTitle) {
         });
         mapInitialized = true;
     }
-    
-    // Clear existing markers
     markers.forEach(marker => marker.setMap(null));
     markers = [];
-    
     const bounds = new google.maps.LatLngBounds();
-    
-    // Loop through teams and create markers
     teams.forEach(team => {
         if (team.lat && team.lng) {
-            // Create AdvancedMarkerElement instead of Marker
             const marker = new google.maps.marker.AdvancedMarkerElement({
+
                 map: map,
                 position: { lat: team.lat, lng: team.lng },
                 title: team.teamName
-            });
-            
+            });            
             const infoWindow = new google.maps.InfoWindow({
                 content: `<div>
                     <h5>${team.teamName}</h5>
                     <p>${team.formattedAddress}</p>
                 </div>`
             });
-            
-            // Add click event to open infoWindow
             marker.addListener('click', () => {
                 infoWindow.open(map, marker);
             });
-            
-            // Store marker
             markers.push(marker);
-            
-            // Extend bounds to include marker
             bounds.extend(marker.getPosition());
         }
     });
-
-    // Adjust map bounds based on markers
     if (markers.length > 0) {
         map.fitBounds(bounds);
         const listener = google.maps.event.addListener(map, 'idle', function() {
@@ -385,8 +372,6 @@ function displayMap(teams, mapTitle) {
             google.maps.event.removeListener(listener);
         });
     }
-    
-    // Set the title of the map
     resultTitle.textContent = mapTitle;
 }
 
