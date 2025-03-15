@@ -34,12 +34,10 @@ const teamTableBody = document.getElementById('teamTableBody');
 document.addEventListener('DOMContentLoaded', initApp);
 
 function initApp() {
-    // Add event listeners
     mapForm.addEventListener('submit', handleFormSubmit);
     copyLinkBtn.addEventListener('click', copyShareLink);
     downloadBtn.addEventListener('click', downloadMapImage);
-    
-    // Load the Google API client library
+
     let gapiLoaded = setInterval(() => {
         if (typeof gapi !== 'undefined') {
             clearInterval(gapiLoaded);
@@ -47,6 +45,7 @@ function initApp() {
         }
     }, 100);
 
+    // ✅ Check if a saved token exists in localStorage
     const savedToken = localStorage.getItem("google_access_token");
 
     if (savedToken) {
@@ -58,7 +57,23 @@ function initApp() {
         document.getElementById('auth-status').style.display = 'none';
         mapForm.style.display = 'block';
     }
+
+    setInterval(() => {
+        if (accessToken) {
+            console.log("Refreshing access token...");
+            refreshAccessToken();
+        }
+    }, 50 * 60 * 1000); // 50 minutes
+    
 }
+
+
+function refreshAccessToken() {
+    tokenClient.requestAccessToken({
+        prompt: '', // Silent refresh (no popup)
+    });
+}
+
 
 // Load the Google API client library and initialize it
 function loadGoogleApiClient() {
@@ -80,7 +95,7 @@ function loadGoogleApiClient() {
 // Callback for Google Identity Services sign-in
 function handleCredentialResponse(response) {
     console.log("Encoded JWT ID token: " + response.credential);
-    
+
     tokenClient = google.accounts.oauth2.initTokenClient({
         client_id: CLIENT_ID,
         scope: SCOPES,
@@ -90,7 +105,7 @@ function handleCredentialResponse(response) {
                 showError("Failed to get access token.");
                 return;
             }
-            
+
             accessToken = tokenResponse.access_token;
             gapi.client.setToken({ access_token: accessToken });
 
@@ -107,23 +122,24 @@ function handleCredentialResponse(response) {
 }
 
 
+
 function handleFormSubmit(event) {
     event.preventDefault();
-    
+
     // Ensure the user is signed in and access token is available
     if (!accessToken) {
         showError('Please sign in with Google first.');
         return;
     }
-    
+
     // Get form values
     const formUrl = formUrlInput.value;
     const mapTitle = mapTitleInput.value || 'Team Locations';
-    
+
     // Show loading indicator and hide result container
     loadingDiv.style.display = 'block';
     resultContainer.style.display = 'none';
-    
+
     // Extract form ID from URL
     const formId = extractFormId(formUrl);
     if (!formId) {
@@ -131,9 +147,10 @@ function handleFormSubmit(event) {
         loadingDiv.style.display = 'none';
         return;
     }
-    
+
     processForm(formId, mapTitle);
 }
+
 
 function extractFormId(url) {
     // Extract the form ID from a Google Form URL
