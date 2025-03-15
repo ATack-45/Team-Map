@@ -359,6 +359,7 @@ function displayMap(teams, mapTitle) {
                 infoWindow.open(map, marker);
             });
             markers.push(marker);
+            bounds.extend(marker.getPosition());
         }
     });
     if (markers.length > 0) {
