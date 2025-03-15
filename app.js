@@ -42,7 +42,6 @@ function initApp() {
     }, 100);
 
     // Check if there's an access token in localStorage
-    const storedToken = getStoredToken();
 
    
     // Add event listeners
@@ -104,6 +103,8 @@ function loadGoogleApiClient() {
             discoveryDocs: DISCOVERY_DOCS
         }).then(() => {
             console.log('Google API client initialized');
+            const storedToken = getStoredToken();
+
             if (storedToken) {
                 accessToken = storedToken;
                 gapi.client.setToken({ access_token: accessToken });
