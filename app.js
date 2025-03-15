@@ -406,30 +406,19 @@ function copyShareLink() {
 }
 
 function downloadMapImage() {
-    // Ensure the map is fully loaded and ready
-    
-    if (typeof google !== 'undefined' && google.maps && google.maps.Map) {
-        element = document.getElementById('map')
-        html2canvas(element, {
-        useCORS: true,
-        onrendered: function(canvas) {
-            var dataUrl= canvas.toDataURL("image/png");
+    const mapCenter = map.getCenter();  // Get the center of the current map view
+    const zoomLevel = map.getZoom();    // Get the current zoom level of the map
+    const size = "600x400";             // Set the size of the static map image
+    const apiKey = API_KEY;  // Your Google Maps API Key
 
-            // DO SOMETHING WITH THE DATAURL
-            // Eg. write it to the page
-            document.write('<img src="' + dataUrl + '"/>');
-            const link = document.createElement('a');
-            link.download = `${resultTitle.textContent.replace(/\s+/g, '-')}.png`;
+    // Construct the URL for the Static Map API
+    const staticMapUrl = `https://maps.googleapis.com/maps/api/staticmap?center=${mapCenter.lat()},${mapCenter.lng()}&zoom=${zoomLevel}&size=${size}&maptype=terrain&markers=color:red|${mapCenter.lat()},${mapCenter.lng()}&key=${apiKey}`;
 
-            // Convert the canvas to an image URL
-            link.href = canvas.toDataURL('image/png');
-            link.click(); // Trigger the download
-        } }).catch(error => {
-            console.error("Error capturing the map image:", error);
-        });
-        } else {
-        console.error("Google Maps API not loaded.");
-        }
+    // Create a link element for downloading the image
+    const link = document.createElement('a');
+    link.href = staticMapUrl;
+    link.download = `${resultTitle.textContent.replace(/\s+/g, '-')}-map.png`;  // Set the download filename
+    link.click();  // Trigger the download
 }
 
 
