@@ -406,13 +406,23 @@ function copyShareLink() {
 }
 
 function downloadMapImage() {
-    html2canvas(document.getElementById('map')).then(canvas => {
-        const link = document.createElement('a');
-        link.download = `${resultTitle.textContent.replace(/\s+/g, '-')}.png`;
-        link.href = canvas.toDataURL('image/png');
-        link.click();
-    });
+    // Ensure the map is fully loaded and ready
+    if (typeof google !== 'undefined' && google.maps && google.maps.Map) {
+        html2canvas(document.getElementById('map')).then(canvas => {
+            const link = document.createElement('a');
+            link.download = `${resultTitle.textContent.replace(/\s+/g, '-')}.png`;
+
+            // Convert the canvas to an image URL
+            link.href = canvas.toDataURL('image/png');
+            link.click(); // Trigger the download
+        }).catch(error => {
+            console.error("Error capturing the map image:", error);
+        });
+    } else {
+        console.error("Google Maps API not loaded.");
+    }
 }
+
 
 function showError(message) {
     alert(message);
