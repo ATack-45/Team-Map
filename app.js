@@ -404,31 +404,32 @@ function copyShareLink() {
         copyLinkBtn.textContent = 'Copy Link';
     }, 2000);
 }
-
-function roundCoordinates(coord, precision = 5) {
-    return parseFloat(coord.toFixed(precision));
-}
-
 function downloadMapImage() {
-  
     // Base URL for Google Static Map API
     const baseUrl = 'https://maps.googleapis.com/maps/api/staticmap?';
 
     // API key (replace with your actual key)
     const apiKey = API_KEY;
 
-    // Add center and zoom level to the map (adjust as necessary)
+    // Set the center, zoom, size, and map type
     let url = `${baseUrl}center=20,0&zoom=1&size=500x300&maptype=satellite`;
 
-    // Add markers to the map URL
+    // Define your marker icon URL (make sure it's correct and publicly accessible)
+    const markerIcon = 'https://ata/mapfiles/ms/icons/red-dot.png';
+
+    // Build a single markers parameter.
+    // Start with the icon and size, then append each coordinate.
+    let markersParam = `&markers=icon:${markerIcon}|size:tiny`;
     markers.forEach(marker => {
-        url += `&markers=icon:https://ATack-45.github.io/Team-map/marker.png|size:tiny|${roundCoordinates(marker.position.lat())},${roundCoordinates(marker.position.lng())}`;
+        // Optionally, reduce coordinate precision with toFixed(5)
+        markersParam += `|${marker.position.lat().toFixed(5)},${marker.position.lng().toFixed(5)}`;
     });
 
-    // Add your API key at the end of the URL
+    // Append markers and API key to the URL
+    url += markersParam;
     url += `&key=${apiKey}`;
 
-    // Create the download link for the static map image
+    // Create and trigger the download link
     const link = document.createElement('a');
     link.download = `${resultTitle.textContent.replace(/\s+/g, '-')}.png`;
     link.href = url;
