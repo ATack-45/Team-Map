@@ -406,7 +406,6 @@ function copyShareLink() {
 }
 
 function downloadMapImage() {
-    // Example markers array (replace this with your actual marker data)
   
     // Base URL for Google Static Map API
     const baseUrl = 'https://maps.googleapis.com/maps/api/staticmap?';
@@ -419,7 +418,7 @@ function downloadMapImage() {
 
     // Add markers to the map URL
     markers.forEach(marker => {
-        url += `&markers=${marker.lat},${marker.lng}`;
+        url += `&markers=${marker.position.lat()},${marker.position.lng()}`;
     });
 
     // Add your API key at the end of the URL
