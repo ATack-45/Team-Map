@@ -414,11 +414,11 @@ function downloadMapImage() {
     const apiKey = API_KEY;
 
     // Add center and zoom level to the map (adjust as necessary)
-    let url = `${baseUrl}center=20,0&zoom=2&size=600x400&maptype=terrain`;
+    let url = `${baseUrl}center=20,0&zoom=1&size=500x300&maptype=satellite`;
 
     // Add markers to the map URL
     markers.forEach(marker => {
-        url += `&markers=${marker.position.lat()},${marker.position.lng()}`;
+        url += `&markers==icon:https://maps.google.com/mapfiles/ms/icons/red-dot.png|size:tiny|${marker.position.lat()},${marker.position.lng()}`;
     });
 
     // Add your API key at the end of the URL
