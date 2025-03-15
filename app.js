@@ -8,7 +8,7 @@ const DISCOVERY_DOCS = [
     "https://forms.googleapis.com/$discovery/rest?version=v1"
 ];
 // Scope for reading Google Sheets and Forms
-const SCOPES = "https://www.googleapis.com/auth/spreadsheets.readonly https://www.googleapis.com/auth/forms.readonly";
+const SCOPES = "https://www.googleapis.com/auth/spreadsheets.readonly https://www.googleapis.com/auth/forms.body.readonly";
 
 // Global variables
 let map;
