@@ -44,17 +44,7 @@ function initApp() {
     // Check if there's an access token in localStorage
     const storedToken = getStoredToken();
 
-    if (storedToken) {
-        accessToken = storedToken;
-        gapi.client.setToken({ access_token: accessToken });
-        // Hide auth message and show the form directly if token is valid
-        document.getElementById('auth-status').style.display = 'none';
-        mapForm.style.display = 'block';
-    } else {
-        // If the token is expired or doesn't exist, load Google API client and start OAuth process
-       initiateLogin();
-    }
-    
+   
     // Add event listeners
     mapForm.addEventListener('submit', handleFormSubmit);
     copyLinkBtn.addEventListener('click', copyShareLink);
@@ -114,6 +104,13 @@ function loadGoogleApiClient() {
             discoveryDocs: DISCOVERY_DOCS
         }).then(() => {
             console.log('Google API client initialized');
+            if (storedToken) {
+                accessToken = storedToken;
+                gapi.client.setToken({ access_token: accessToken });
+                // Hide auth message and show the form directly if token is valid
+                document.getElementById('auth-status').style.display = 'none';
+                mapForm.style.display = 'block';
+            }     
         }).catch(err => console.error('Error initializing gapi:', err));
     });
 }
