@@ -34,6 +34,13 @@ const teamTableBody = document.getElementById('teamTableBody');
 document.addEventListener('DOMContentLoaded', initApp);
 
 function initApp() {
+    let gapiLoaded = setInterval(() => {
+        if (typeof gapi !== 'undefined') {
+            clearInterval(gapiLoaded);
+            loadGoogleApiClient();
+        }
+    }, 100);
+
     // Check if there's an access token in localStorage
     const storedToken = getStoredToken();
 
@@ -47,13 +54,7 @@ function initApp() {
         // If the token is expired or doesn't exist, load Google API client and start OAuth process
        initiateLogin();
     }
-    let gapiLoaded = setInterval(() => {
-        if (typeof gapi !== 'undefined') {
-            clearInterval(gapiLoaded);
-            loadGoogleApiClient();
-        }
-    }, 100);
-
+    
     // Add event listeners
     mapForm.addEventListener('submit', handleFormSubmit);
     copyLinkBtn.addEventListener('click', copyShareLink);
