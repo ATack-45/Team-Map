@@ -406,20 +406,32 @@ function copyShareLink() {
 }
 
 function downloadMapImage() {
-    const mapCenter = map.getCenter();  // Get the center of the current map view
-    const zoomLevel = map.getZoom();    // Get the current zoom level of the map
-    const size = "600x400";             // Set the size of the static map image
-    const apiKey = API_KEY;  // Your Google Maps API Key
+    // Example markers array (replace this with your actual marker data)
+  
+    // Base URL for Google Static Map API
+    const baseUrl = 'https://maps.googleapis.com/maps/api/staticmap?';
 
-    // Construct the URL for the Static Map API
-    const staticMapUrl = `https://maps.googleapis.com/maps/api/staticmap?center=${mapCenter.lat()},${mapCenter.lng()}&zoom=${zoomLevel}&size=${size}&maptype=terrain&markers=color:red|${mapCenter.lat()},${mapCenter.lng()}&key=${apiKey}`;
+    // API key (replace with your actual key)
+    const apiKey = API_KEY;
 
-    // Create a link element for downloading the image
+    // Add center and zoom level to the map (adjust as necessary)
+    let url = `${baseUrl}center=20,0&zoom=2&size=600x400&maptype=terrain`;
+
+    // Add markers to the map URL
+    markers.forEach(marker => {
+        url += `&markers=${marker.lat},${marker.lng}`;
+    });
+
+    // Add your API key at the end of the URL
+    url += `&key=${apiKey}`;
+
+    // Create the download link for the static map image
     const link = document.createElement('a');
-    link.href = staticMapUrl;
-    link.download = `${resultTitle.textContent.replace(/\s+/g, '-')}-map.png`;  // Set the download filename
-    link.click();  // Trigger the download
+    link.download = `${resultTitle.textContent.replace(/\s+/g, '-')}.png`;
+    link.href = url;
+    link.click();
 }
+
 
 
 function showError(message) {
