@@ -35,28 +35,34 @@ document.addEventListener('DOMContentLoaded', initApp);
 
 function initApp() {
     // Check if there's an access token in localStorage
-    accessToken = localStorage.getItem('accessToken');
-    if (accessToken && !isAccessTokenExpired()) {
-        // If the token is valid, initialize gapi client with it
+    const storedToken = getStoredToken();
+
+    if (storedToken) {
+        accessToken = storedToken;
         gapi.client.setToken({ access_token: accessToken });
+        // Hide auth message and show the form directly if token is valid
         document.getElementById('auth-status').style.display = 'none';
         mapForm.style.display = 'block';
     } else {
         // If the token is expired or doesn't exist, load Google API client and start OAuth process
-        let gapiLoaded = setInterval(() => {
-            if (typeof gapi !== 'undefined') {
-                clearInterval(gapiLoaded);
-                loadGoogleApiClient();
-            }
-        }, 100);
+       initiateLogin();
     }
+    let gapiLoaded = setInterval(() => {
+        if (typeof gapi !== 'undefined') {
+            clearInterval(gapiLoaded);
+            loadGoogleApiClient();
+        }
+    }, 100);
 
     // Add event listeners
     mapForm.addEventListener('submit', handleFormSubmit);
     copyLinkBtn.addEventListener('click', copyShareLink);
     downloadBtn.addEventListener('click', downloadMapImage);
 }
-
+function initiateLogin() {
+    // You can replace this with a prompt for the user to log in
+    google.accounts.id.prompt(); // Prompt user for login if necessary
+}
 // Function to check if the token is expired
 function isAccessTokenExpired() {
     const expiryTime = localStorage.getItem('accessTokenExpiry');
@@ -75,7 +81,7 @@ function refreshAccessToken() {
             },
             body: new URLSearchParams({
                 client_id: CLIENT_ID,
-                client_secret: 'YOUR_CLIENT_SECRET', // You should have this stored securely
+                client_secret: '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', // You should have this stored securely
                 refresh_token: refreshToken,
                 grant_type: 'refresh_token',
             }),
@@ -111,6 +117,30 @@ function loadGoogleApiClient() {
     });
 }
 
+// Function to store the access token and expiry time
+function storeToken(tokenResponse) {
+    const now = new Date().getTime();
+    const expiryTime = now + tokenResponse.expires_in * 1000; // Convert to ms
+    // Save the token and expiry time in localStorage
+    localStorage.setItem('access_token', tokenResponse.access_token);
+    localStorage.setItem('token_expiry', expiryTime);
+}
+
+// Function to get the stored token
+function getStoredToken() {
+    const accessToken = localStorage.getItem('access_token');
+    const tokenExpiry = localStorage.getItem('token_expiry');
+    const now = new Date().getTime();
+
+    // If token exists and hasn't expired, return it
+    if (accessToken && tokenExpiry && now < tokenExpiry) {
+        return accessToken;
+    } else {
+        // Token is either missing or expired
+        return null;
+    }
+}
+
 // Callback for Google Identity Services sign-in
 function handleCredentialResponse(response) {
     console.log("Encoded JWT ID token: " + response.credential);
@@ -125,11 +155,9 @@ function handleCredentialResponse(response) {
                 return;
             }
             accessToken = tokenResponse.access_token;
+            storeToken(tokenResponse); // Store the token and expiry time
+
             gapi.client.setToken({ access_token: accessToken });
-
-            // Store the access token in localStorage
-            localStorage.setItem('accessToken', accessToken);
-
             // Hide auth message and show the form
             document.getElementById('auth-status').style.display = 'none';
             mapForm.style.display = 'block';
@@ -138,6 +166,7 @@ function handleCredentialResponse(response) {
     // Request access token
     tokenClient.requestAccessToken();
 }
+
 
 function handleFormSubmit(event) {
     event.preventDefault();
