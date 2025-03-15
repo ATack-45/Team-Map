@@ -407,20 +407,29 @@ function copyShareLink() {
 
 function downloadMapImage() {
     // Ensure the map is fully loaded and ready
+    
     if (typeof google !== 'undefined' && google.maps && google.maps.Map) {
-        html2canvas(document.getElementById('map')).then(canvas => {
+        element = document.getElementById('map')
+        html2canvas(element, {
+        useCORS: true,
+        onrendered: function(canvas) {
+            var dataUrl= canvas.toDataURL("image/png");
+
+            // DO SOMETHING WITH THE DATAURL
+            // Eg. write it to the page
+            document.write('<img src="' + dataUrl + '"/>');
             const link = document.createElement('a');
             link.download = `${resultTitle.textContent.replace(/\s+/g, '-')}.png`;
 
             // Convert the canvas to an image URL
             link.href = canvas.toDataURL('image/png');
             link.click(); // Trigger the download
-        }).catch(error => {
+        } }).catch(error => {
             console.error("Error capturing the map image:", error);
         });
-    } else {
+        } else {
         console.error("Google Maps API not loaded.");
-    }
+        }
 }
 
 
