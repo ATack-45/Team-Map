@@ -34,19 +34,65 @@ const teamTableBody = document.getElementById('teamTableBody');
 document.addEventListener('DOMContentLoaded', initApp);
 
 function initApp() {
+    // Check if there's an access token in localStorage
+    accessToken = localStorage.getItem('accessToken');
+    if (accessToken && !isAccessTokenExpired()) {
+        // If the token is valid, initialize gapi client with it
+        gapi.client.setToken({ access_token: accessToken });
+        document.getElementById('auth-status').style.display = 'none';
+        mapForm.style.display = 'block';
+    } else {
+        // If the token is expired or doesn't exist, load Google API client and start OAuth process
+        let gapiLoaded = setInterval(() => {
+            if (typeof gapi !== 'undefined') {
+                clearInterval(gapiLoaded);
+                loadGoogleApiClient();
+            }
+        }, 100);
+    }
+
     // Add event listeners
     mapForm.addEventListener('submit', handleFormSubmit);
     copyLinkBtn.addEventListener('click', copyShareLink);
     downloadBtn.addEventListener('click', downloadMapImage);
-    
-    // Load the Google API client library
-    let gapiLoaded = setInterval(() => {
-        if (typeof gapi !== 'undefined') {
-            clearInterval(gapiLoaded);
-            loadGoogleApiClient();
-        }
-    }, 100);
 }
+
+// Function to check if the token is expired
+function isAccessTokenExpired() {
+    const expiryTime = localStorage.getItem('accessTokenExpiry');
+    return expiryTime && Date.now() > expiryTime;
+}
+
+// Function to refresh the access token if expired
+function refreshAccessToken() {
+    const refreshToken = localStorage.getItem('refreshToken'); // Make sure to store the refresh token during login
+    if (refreshToken) {
+        // Call Google's token refresh endpoint to get a new access token
+        fetch('https://oauth2.googleapis.com/token', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: new URLSearchParams({
+                client_id: CLIENT_ID,
+                client_secret: 'YOUR_CLIENT_SECRET', // You should have this stored securely
+                refresh_token: refreshToken,
+                grant_type: 'refresh_token',
+            }),
+        })
+        .then(response => response.json())
+        .then(data => {
+            accessToken = data.access_token;
+            localStorage.setItem('accessToken', accessToken);
+            localStorage.setItem('accessTokenExpiry', Date.now() + data.expires_in * 1000); // Set new expiry time
+            gapi.client.setToken({ access_token: accessToken });
+        })
+        .catch(error => console.error('Error refreshing token:', error));
+    } else {
+        console.error('No refresh token found');
+    }
+}
+
 
 // Load the Google API client library and initialize it
 function loadGoogleApiClient() {
@@ -80,6 +126,10 @@ function handleCredentialResponse(response) {
             }
             accessToken = tokenResponse.access_token;
             gapi.client.setToken({ access_token: accessToken });
+
+            // Store the access token in localStorage
+            localStorage.setItem('accessToken', accessToken);
+
             // Hide auth message and show the form
             document.getElementById('auth-status').style.display = 'none';
             mapForm.style.display = 'block';
