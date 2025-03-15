@@ -46,6 +46,18 @@ function initApp() {
             loadGoogleApiClient();
         }
     }, 100);
+
+    const savedToken = localStorage.getItem("google_access_token");
+
+    if (savedToken) {
+        console.log("Restoring previous session...");
+        accessToken = savedToken;
+        gapi.client.setToken({ access_token: accessToken });
+
+        // Automatically show the form if the user was previously logged in
+        document.getElementById('auth-status').style.display = 'none';
+        mapForm.style.display = 'block';
+    }
 }
 
 // Load the Google API client library and initialize it
@@ -68,26 +80,32 @@ function loadGoogleApiClient() {
 // Callback for Google Identity Services sign-in
 function handleCredentialResponse(response) {
     console.log("Encoded JWT ID token: " + response.credential);
-    // Initialize token client for OAuth access
+    
     tokenClient = google.accounts.oauth2.initTokenClient({
         client_id: CLIENT_ID,
         scope: SCOPES,
         callback: (tokenResponse) => {
             if (tokenResponse.error) {
-                console.error(tokenResponse);
-                showError("Failed to get access token");
+                console.error("OAuth Error:", tokenResponse);
+                showError("Failed to get access token.");
                 return;
             }
+            
             accessToken = tokenResponse.access_token;
             gapi.client.setToken({ access_token: accessToken });
+
+            localStorage.setItem("google_access_token", accessToken);
+
             // Hide auth message and show the form
             document.getElementById('auth-status').style.display = 'none';
             mapForm.style.display = 'block';
         },
     });
+
     // Request access token
     tokenClient.requestAccessToken();
 }
+
 
 function handleFormSubmit(event) {
     event.preventDefault();
