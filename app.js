@@ -34,47 +34,19 @@ const teamTableBody = document.getElementById('teamTableBody');
 document.addEventListener('DOMContentLoaded', initApp);
 
 function initApp() {
+    // Add event listeners
     mapForm.addEventListener('submit', handleFormSubmit);
     copyLinkBtn.addEventListener('click', copyShareLink);
     downloadBtn.addEventListener('click', downloadMapImage);
-
-   
-    const savedToken = localStorage.getItem("google_access_token");
-
-    if (savedToken) {
-        console.log("Restoring previous session...");
-        accessToken = savedToken;
-        gapi.client.setToken({ access_token: accessToken });
-
-        // Automatically show the form if the user was previously logged in
-        document.getElementById('auth-status').style.display = 'none';
-        mapForm.style.display = 'block';
-    }
-
+    
+    // Load the Google API client library
     let gapiLoaded = setInterval(() => {
         if (typeof gapi !== 'undefined') {
             clearInterval(gapiLoaded);
             loadGoogleApiClient();
         }
     }, 100);
-
-
-    setInterval(() => {
-        if (accessToken) {
-            console.log("Refreshing access token...");
-            refreshAccessToken();
-        }
-    }, 50 * 60 * 1000); // 50 minutes
-    
 }
-
-
-function refreshAccessToken() {
-    tokenClient.requestAccessToken({
-        prompt: '', // Silent refresh (no popup)
-    });
-}
-
 
 // Load the Google API client library and initialize it
 function loadGoogleApiClient() {
@@ -96,51 +68,44 @@ function loadGoogleApiClient() {
 // Callback for Google Identity Services sign-in
 function handleCredentialResponse(response) {
     console.log("Encoded JWT ID token: " + response.credential);
-
+    // Initialize token client for OAuth access
     tokenClient = google.accounts.oauth2.initTokenClient({
         client_id: CLIENT_ID,
         scope: SCOPES,
         callback: (tokenResponse) => {
             if (tokenResponse.error) {
-                console.error("OAuth Error:", tokenResponse);
-                showError("Failed to get access token.");
+                console.error(tokenResponse);
+                showError("Failed to get access token");
                 return;
             }
-
             accessToken = tokenResponse.access_token;
             gapi.client.setToken({ access_token: accessToken });
-
-            localStorage.setItem("google_access_token", accessToken);
-
             // Hide auth message and show the form
             document.getElementById('auth-status').style.display = 'none';
             mapForm.style.display = 'block';
         },
     });
-
     // Request access token
     tokenClient.requestAccessToken();
 }
 
-
-
 function handleFormSubmit(event) {
     event.preventDefault();
-
+    
     // Ensure the user is signed in and access token is available
     if (!accessToken) {
         showError('Please sign in with Google first.');
         return;
     }
-
+    
     // Get form values
     const formUrl = formUrlInput.value;
     const mapTitle = mapTitleInput.value || 'Team Locations';
-
+    
     // Show loading indicator and hide result container
     loadingDiv.style.display = 'block';
     resultContainer.style.display = 'none';
-
+    
     // Extract form ID from URL
     const formId = extractFormId(formUrl);
     if (!formId) {
@@ -148,10 +113,9 @@ function handleFormSubmit(event) {
         loadingDiv.style.display = 'none';
         return;
     }
-
+    
     processForm(formId, mapTitle);
 }
-
 
 function extractFormId(url) {
     // Extract the form ID from a Google Form URL
@@ -306,7 +270,8 @@ function displayMap(teams, mapTitle) {
                 map: map,
                 position: { lat: team.lat, lng: team.lng },
                 title: team.teamName
-            });            
+            });
+            
             const infoWindow = new google.maps.InfoWindow({
                 content: `<div>
                     <h5>${team.teamName}</h5>
