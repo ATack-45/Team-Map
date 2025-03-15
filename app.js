@@ -38,8 +38,21 @@ function initApp() {
     copyLinkBtn.addEventListener('click', copyShareLink);
     downloadBtn.addEventListener('click', downloadMapImage);
 
+   
+    const savedToken = localStorage.getItem("google_access_token");
+
+    if (savedToken) {
+        console.log("Restoring previous session...");
+        accessToken = savedToken;
+        gapi.client.setToken({ access_token: accessToken });
+
+        // Automatically show the form if the user was previously logged in
+        document.getElementById('auth-status').style.display = 'none';
+        mapForm.style.display = 'block';
+    }
+
     let gapiLoaded = setInterval(() => {
-        if (typeof gapi !== 'undefined' && gapi.client) {
+        if (typeof gapi !== 'undefined') {
             clearInterval(gapiLoaded);
             loadGoogleApiClient();
         }
@@ -69,27 +82,16 @@ function loadGoogleApiClient() {
         console.error("gapi is not loaded yet.");
         return;
     }
-
-    gapi.load('client', () => {
+    gapi.load('client', function() {
+        console.log('Google API client loaded');
         gapi.client.init({
             apiKey: API_KEY,
             discoveryDocs: DISCOVERY_DOCS
         }).then(() => {
             console.log('Google API client initialized');
-            const savedToken = localStorage.getItem("google_access_token");
-            if (savedToken) {
-                console.log("Restoring previous session...");
-                accessToken = savedToken;
-                gapi.client.setToken({ access_token: accessToken });
-
-                // Show the form immediately
-                document.getElementById('auth-status').style.display = 'none';
-                mapForm.style.display = 'block';
-            }
         }).catch(err => console.error('Error initializing gapi:', err));
     });
 }
-
 
 // Callback for Google Identity Services sign-in
 function handleCredentialResponse(response) {
