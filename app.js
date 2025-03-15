@@ -160,21 +160,25 @@ function processForm(formId, mapTitle) {
 }
 
 function getResponseSpreadsheetId(formId) {
-    // Get the form metadata to find the linked response spreadsheet
-    return gapi.client.request({
-        path: `https://forms.googleapis.com/v1/forms/${formId}`,
-        method: 'GET'
+    return gapi.client.forms.forms.get({
+        formId: formId
     }).then(response => {
         const form = response.result;
-        if (form.responseDestination && form.responseDestination.spreadsheet) {
-            return form.responseDestination.spreadsheet.spreadsheetId;
+        
+        // Check if a response destination (Google Sheets) exists
+        if (form.linkedSheetId) {
+            return form.linkedSheetId;
+        } else {
+            throw new Error("No linked response spreadsheet found. Please ensure your form collects responses in Google Sheets.");
         }
-        return fetchLinkedSheets(formId);
     }).catch(error => {
-        console.error('Error getting form metadata:', error);
-        return fetchLinkedSheets(formId);
+        console.error('Error retrieving response spreadsheet:', error);
+        showError('Could not retrieve the response spreadsheet. Please ensure your form has responses saved in a Google Sheet.');
+        return null;
     });
 }
+
+
 
 function fetchLinkedSheets(formId) {
     const responseSheetUrl = `https://docs.google.com/spreadsheets/d/e/${formId}/viewanalytics`;
