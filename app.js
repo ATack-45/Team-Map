@@ -266,11 +266,11 @@ function displayMap(teams, mapTitle) {
     const bounds = new google.maps.LatLngBounds();
     teams.forEach(team => {
         if (team.lat && team.lng) {
-            const marker = new google.maps.Marker({
-                position: { lat: team.lat, lng: team.lng },
+            const marker = new google.maps.marker.AdvancedMarkerElement({
                 map: map,
+                position: { lat: team.lat, lng: team.lng },
                 title: team.teamName
-            });
+            });            
             const infoWindow = new google.maps.InfoWindow({
                 content: `<div>
                     <h5>${team.teamName}</h5>
