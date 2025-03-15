@@ -417,24 +417,27 @@ function downloadMapImage() {
     // Define your marker icon URL (make sure it's correct and publicly accessible)
     const markerIcon = 'https://ata/mapfiles/ms/icons/red-dot.png';
 
-    // Build a single markers parameter.
-    // Start with the icon and size, then append each coordinate.
-    let markersParam = `&markers=icon:${markerIcon}|size:tiny`;
-    markers.forEach(marker => {
-        // Optionally, reduce coordinate precision with toFixed(5)
-        markersParam += `|${marker.position.lat().toFixed(5)},${marker.position.lng().toFixed(5)}`;
-    });
+    // Combine all the markers into a single string
+    const markerParams = markers.map(marker =>
+        `${marker.position.lat().toFixed(5)},${marker.position.lng().toFixed(5)}`
+    ).join('|');
 
-    // Append markers and API key to the URL
-    url += markersParam;
+    // Add the markers to the URL, using a single `&markers=` parameter
+    url += `&markers=icon:${markerIcon}|size:tiny|${markerParams}`;
+
+    // Add your API key at the end of the URL
     url += `&key=${apiKey}`;
 
-    // Create and trigger the download link
+    // Log the URL to check if it's correct
+    console.log(url);
+
+    // Create the download link for the static map image
     const link = document.createElement('a');
     link.download = `${resultTitle.textContent.replace(/\s+/g, '-')}.png`;
     link.href = url;
     link.click();
 }
+
 
 
 
