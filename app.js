@@ -405,6 +405,10 @@ function copyShareLink() {
     }, 2000);
 }
 
+function roundCoordinates(coord, precision = 5) {
+    return parseFloat(coord.toFixed(precision));
+}
+
 function downloadMapImage() {
   
     // Base URL for Google Static Map API
@@ -418,7 +422,7 @@ function downloadMapImage() {
 
     // Add markers to the map URL
     markers.forEach(marker => {
-        url += `&markers=icon:https://maps.google.com/mapfiles/ms/icons/red-dot.png|size:tiny|${marker.position.lat()},${marker.position.lng()}`;
+        url += `&markers=icon:https://ATack-45.github.io/Team-map/marker.png|size:tiny|${roundCoordinates(marker.position.lat())},${roundCoordinates(marker.position.lng())}`;
     });
 
     // Add your API key at the end of the URL
