@@ -348,8 +348,8 @@ function displayMap(teams, mapTitle) {
     // Loop through teams and create markers
     teams.forEach(team => {
         if (team.lat && team.lng) {
-            // Corrected marker instantiation
-            const marker = new google.maps.AdvancedMarkerElement({
+            // Create AdvancedMarkerElement instead of Marker
+            const marker = new google.maps.marker.AdvancedMarkerElement({
                 map: map,
                 position: { lat: team.lat, lng: team.lng },
                 title: team.teamName
@@ -389,6 +389,7 @@ function displayMap(teams, mapTitle) {
     // Set the title of the map
     resultTitle.textContent = mapTitle;
 }
+
 
 
 function updateResultsUI(teams, mapTitle) {
