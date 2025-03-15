@@ -415,7 +415,7 @@ function downloadMapImage() {
     let url = `${baseUrl}center=20,0&zoom=1&size=500x300&maptype=satellite`;
 
     // Define your marker icon URL (make sure it's correct and publicly accessible)
-    const markerIcon = 'https://ata/mapfiles/ms/icons/red-dot.png';
+    const markerIcon = 'https://maps.google.com/mapfiles/ms/icons/red-dot.png';
 
     // Combine all the markers into a single string
     const markerParams = markers.map(marker =>
