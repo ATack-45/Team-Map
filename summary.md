@@ -1,1 +1,1 @@
-summary.md
+This tool is a map generator for competitive robotics team to interact with each other at regional, national, and global competitions. Teams can create Google forms to be able to share with each other, than upload the data to the tool, and it will generate a intractive and saveable map of all the locations the teams are from.
