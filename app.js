@@ -368,6 +368,9 @@ function handleFormSubmit(event) {
     const formUrl = formUrlInput.value;
     const mapTitle = mapTitleInput.value || 'Team Locations';
 
+    // Sync the form URL with the kiosk form
+    kioskFormUrlInput.value = formUrl;
+
     // Show loading indicators
     submitSpinner.classList.remove('d-none');
     generateBtn.disabled = true;
@@ -839,11 +842,21 @@ function toggleKioskMode() {
         kioskModeCard.style.display = 'block';
         resultContainer.style.display = 'none';
         localStorage.setItem('kioskMode', 'enabled');
+
+        // Transfer form URL from main form to kiosk form if available
+        if (formUrlInput.value.trim()) {
+            kioskFormUrlInput.value = formUrlInput.value;
+        }
     } else {
         // Disable kiosk mode
         normalModeCard.style.display = 'block';
         kioskModeCard.style.display = 'none';
         localStorage.setItem('kioskMode', 'disabled');
+
+        // Transfer form URL from kiosk form to main form if available
+        if (kioskFormUrlInput.value.trim()) {
+            formUrlInput.value = kioskFormUrlInput.value;
+        }
     }
 }
 
@@ -865,6 +878,9 @@ function handleKioskFormSubmit(event) {
     // Show loading indicator
     qrSpinner.classList.remove('d-none');
     generateQrBtn.disabled = true;
+
+    // Sync the form URL with the main form
+    formUrlInput.value = formUrl;
 
     // Generate QR code
     generateQrCode(formUrl, title);
@@ -1030,7 +1046,12 @@ window.onload = function() {
     const mapTitle = urlParams.get('title') ? decodeURIComponent(urlParams.get('title')) : 'Team Locations';
 
     if (formId) {
-        formUrlInput.value = `https://docs.google.com/forms/d/${formId}`;
+        const formUrl = `https://docs.google.com/forms/d/${formId}`;
+
+        // Set URL in both forms
+        formUrlInput.value = formUrl;
+        kioskFormUrlInput.value = formUrl;
+
         mapTitleInput.value = mapTitle;
 
         const waitForToken = setInterval(() => {
