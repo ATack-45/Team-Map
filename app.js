@@ -341,6 +341,19 @@ function handleCredentialResponse(response) {
             // Hide auth message and show the form
             document.getElementById('auth-status').style.display = 'none';
             mapForm.style.display = 'block';
+
+            // Check if there's a pending shared map to process
+            const pendingFormId = sessionStorage.getItem('pendingFormId');
+            const pendingMapTitle = sessionStorage.getItem('pendingMapTitle');
+
+            if (pendingFormId) {
+                // Process the shared map
+                processSharedMap(pendingFormId, pendingMapTitle || 'Team Locations');
+
+                // Clear the pending data
+                sessionStorage.removeItem('pendingFormId');
+                sessionStorage.removeItem('pendingMapTitle');
+            }
         },
     });
     // Request access token
@@ -823,6 +836,21 @@ function showError(message) {
     }, 5000);
 }
 
+// Function to process a shared map after authentication
+function processSharedMap(formId, mapTitle) {
+    const formUrl = `https://docs.google.com/forms/d/${formId}`;
+
+    // Set form values
+    formUrlInput.value = formUrl;
+    mapTitleInput.value = mapTitle;
+
+    // Sync with kiosk form
+    kioskFormUrlInput.value = formUrl;
+
+    // Submit the form to generate the map
+    mapForm.dispatchEvent(new Event('submit'));
+}
+
 // Function to open the form template
 function openFormTemplate(e) {
     e.preventDefault();
@@ -1045,20 +1073,19 @@ window.onload = function() {
     const formId = urlParams.get('formId');
     const mapTitle = urlParams.get('title') ? decodeURIComponent(urlParams.get('title')) : 'Team Locations';
 
+    // Store the parameters for later use after authentication
     if (formId) {
-        const formUrl = `https://docs.google.com/forms/d/${formId}`;
+        // Store the form data in sessionStorage for use after authentication
+        sessionStorage.setItem('pendingFormId', formId);
+        sessionStorage.setItem('pendingMapTitle', mapTitle);
 
-        // Set URL in both forms
-        formUrlInput.value = formUrl;
+        // Set the kiosk form URL since it doesn't require authentication
+        const formUrl = `https://docs.google.com/forms/d/${formId}`;
         kioskFormUrlInput.value = formUrl;
 
-        mapTitleInput.value = mapTitle;
-
-        const waitForToken = setInterval(() => {
-            if (accessToken) {
-                clearInterval(waitForToken);
-                mapForm.dispatchEvent(new Event('submit'));
-            }
-        }, 100);
+        // If already authenticated, process the form
+        if (accessToken) {
+            processSharedMap(formId, mapTitle);
+        }
     }
 };
