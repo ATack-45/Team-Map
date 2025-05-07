@@ -566,6 +566,16 @@ function geocodeLocations(teams) {
 }
 
 function displayMap(teams, mapTitle) {
+    // Store current map state if it exists
+    let currentZoom = null;
+    let currentCenter = null;
+    let isFirstLoad = !mapInitialized;
+
+    if (mapInitialized && map) {
+        currentZoom = map.getZoom();
+        currentCenter = map.getCenter();
+    }
+
     if (!mapInitialized) {
         map = new google.maps.Map(document.getElementById('map'), {
             zoom: 2,
@@ -633,16 +643,23 @@ function displayMap(teams, mapTitle) {
             marker.setMap(map);
         });
 
-        // Fit map to show all markers
-        map.fitBounds(bounds);
+        // Only fit bounds on first load or if we don't have previous state
+        if (isFirstLoad) {
+            // Fit map to show all markers
+            map.fitBounds(bounds);
 
-        // Prevent excessive zoom when there's only one marker
-        const listener = google.maps.event.addListener(map, 'idle', function() {
-            if (map.getZoom() > 16) {
-                map.setZoom(16);
-            }
-            google.maps.event.removeListener(listener);
-        });
+            // Prevent excessive zoom when there's only one marker
+            const listener = google.maps.event.addListener(map, 'idle', function() {
+                if (map.getZoom() > 16) {
+                    map.setZoom(16);
+                }
+                google.maps.event.removeListener(listener);
+            });
+        } else if (currentZoom && currentCenter) {
+            // Restore previous zoom and center
+            map.setZoom(currentZoom);
+            map.setCenter(currentCenter);
+        }
     }
 
     resultTitle.textContent = mapTitle;
