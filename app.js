@@ -834,9 +834,6 @@ function processSharedMap(formId, mapTitle) {
     formUrlInput.value = formUrl;
     mapTitleInput.value = mapTitle;
 
-    // Sync with kiosk form
-    kioskFormUrlInput.value = formUrl;
-
     // Submit the form to generate the map
     mapForm.dispatchEvent(new Event('submit'));
 }
