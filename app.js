@@ -626,33 +626,11 @@ function displayMap(teams, mapTitle) {
         }
     });
 
-    // Add markers to the map using MarkerClusterer
+    // Add markers directly to the map (no clustering)
     if (markers.length > 0) {
-        // Apply marker clusterer to group nearby markers
-        const markerCluster = new markerClusterer.MarkerClusterer({
-            map,
-            markers,
-            algorithm: new markerClusterer.SuperClusterAlgorithm({
-                radius: 100,
-                maxZoom: 15
-            }),
-            renderer: {
-                render: ({ count, position }) => {
-                    return new google.maps.Marker({
-                        position,
-                        label: { text: String(count), color: "white", fontSize: "12px" },
-                        icon: {
-                            path: google.maps.SymbolPath.CIRCLE,
-                            fillColor: "#4285F4",
-                            fillOpacity: 0.8,
-                            strokeWeight: 1,
-                            strokeColor: "#FFFFFF",
-                            scale: Math.max(count * 3, 20)
-                        },
-                        zIndex: Number(google.maps.Marker.MAX_ZINDEX) + count
-                    });
-                }
-            }
+        // Add each marker to the map individually
+        markers.forEach(marker => {
+            marker.setMap(map);
         });
 
         // Fit map to show all markers
