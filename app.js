@@ -17,11 +17,15 @@ let teamData = [];
 let mapInitialized = false;
 let tokenClient;
 let accessToken = null;
+let refreshTimer = null;
+let currentFormId = null;
+let currentMapTitle = null;
 
 // DOM elements
 const mapForm = document.getElementById('mapForm');
 const formUrlInput = document.getElementById('formUrl');
 const mapTitleInput = document.getElementById('mapTitle');
+const refreshIntervalInput = document.getElementById('refreshInterval');
 const loadingDiv = document.querySelector('.loading');
 const resultContainer = document.querySelector('.result-container');
 const resultTitle = document.getElementById('resultTitle');
@@ -32,32 +36,10 @@ const teamTableBody = document.getElementById('teamTableBody');
 const darkModeToggle = document.getElementById('darkModeToggle');
 const generateBtn = document.getElementById('generateBtn');
 const submitSpinner = document.getElementById('submitSpinner');
-
-// Kiosk mode elements
-const kioskModeToggle = document.getElementById('kioskModeToggle');
-const normalModeCard = document.getElementById('normalModeCard');
-const kioskModeCard = document.getElementById('kioskModeCard');
-const kioskForm = document.getElementById('kioskForm');
-const kioskFormUrlInput = document.getElementById('kioskFormUrl');
-const kioskTitleInput = document.getElementById('kioskTitle');
-const generateQrBtn = document.getElementById('generateQrBtn');
-const qrSpinner = document.getElementById('qrSpinner');
-const qrResult = document.getElementById('qrResult');
-const qrTitle = document.getElementById('qrTitle');
-const qrCanvas = document.getElementById('qrCanvas');
-const printQrBtn = document.getElementById('printQrBtn');
-const newQrBtn = document.getElementById('newQrBtn');
-const fullscreenBtn = document.getElementById('fullscreenBtn');
-const qrFullscreenBtn = document.getElementById('qrFullscreenBtn');
+const autoRefreshToggle = document.getElementById('autoRefreshToggle');
 
 // Initialize the application when the page loads
 document.addEventListener('DOMContentLoaded', initApp);
-
-// Listen for fullscreen change events
-document.addEventListener('fullscreenchange', updateFullscreenButtons);
-document.addEventListener('webkitfullscreenchange', updateFullscreenButtons);
-document.addEventListener('mozfullscreenchange', updateFullscreenButtons);
-document.addEventListener('MSFullscreenChange', updateFullscreenButtons);
 
 function initApp() {
     let gapiLoaded = setInterval(() => {
@@ -78,6 +60,9 @@ function initApp() {
     // Set up dark mode toggle
     darkModeToggle.addEventListener('click', toggleDarkMode);
 
+    // Set up auto-refresh toggle
+    autoRefreshToggle.addEventListener('change', toggleAutoRefresh);
+
     // Default to dark mode unless explicitly set to light mode
     if (localStorage.getItem('darkMode') !== 'disabled') {
         enableDarkMode();
@@ -85,24 +70,9 @@ function initApp() {
         disableDarkMode();
     }
 
-    // Set up kiosk mode toggle
-    kioskModeToggle.addEventListener('change', toggleKioskMode);
-
-    // Set up kiosk form submission
-    kioskForm.addEventListener('submit', handleKioskFormSubmit);
-
-    // Set up QR code buttons
-    printQrBtn.addEventListener('click', printQrCode);
-    newQrBtn.addEventListener('click', resetKioskForm);
-
-    // Set up fullscreen buttons
-    fullscreenBtn.addEventListener('click', () => toggleFullscreen(kioskModeCard));
-    qrFullscreenBtn.addEventListener('click', () => toggleFullscreen(kioskModeCard));
-
-    // Check for saved kiosk mode preference
-    if (localStorage.getItem('kioskMode') === 'enabled') {
-        kioskModeToggle.checked = true;
-        toggleKioskMode();
+    // Check for saved auto-refresh preference
+    if (localStorage.getItem('autoRefresh') === 'enabled') {
+        autoRefreshToggle.checked = true;
     }
 }
 
@@ -381,9 +351,6 @@ function handleFormSubmit(event) {
     const formUrl = formUrlInput.value;
     const mapTitle = mapTitleInput.value || 'Team Locations';
 
-    // Sync the form URL with the kiosk form
-    kioskFormUrlInput.value = formUrl;
-
     // Show loading indicators
     submitSpinner.classList.remove('d-none');
     generateBtn.disabled = true;
@@ -400,8 +367,18 @@ function handleFormSubmit(event) {
         return;
     }
 
+    // Store the current form ID and title for auto-refresh
+    currentFormId = formId;
+    currentMapTitle = mapTitle;
+
     // Process the form
     processForm(formId, mapTitle)
+        .then(() => {
+            // Start auto-refresh if enabled
+            if (autoRefreshToggle.checked) {
+                startAutoRefresh();
+            }
+        })
         .catch(error => {
             console.error('Error in form processing:', error);
             showError('An error occurred: ' + error.message);
@@ -483,22 +460,35 @@ function processForm(formId, mapTitle) {
 }
 
 function getResponseSpreadsheetId(formId) {
-    return gapi.client.forms.forms.get({
-        formId: formId
-    }).then(response => {
-        const form = response.result;
+    // Try to use the Forms API first
+    try {
+        if (gapi.client.forms) {
+            return gapi.client.forms.forms.get({
+                formId: formId
+            }).then(response => {
+                const form = response.result;
 
-        // Check if a response destination (Google Sheets) exists
-        if (form.linkedSheetId) {
-            return form.linkedSheetId;
+                // Check if a response destination (Google Sheets) exists
+                if (form.linkedSheetId) {
+                    return form.linkedSheetId;
+                } else {
+                    console.log("No linked sheet found via Forms API, trying alternative method");
+                    return fetchLinkedSheets(formId);
+                }
+            }).catch(error => {
+                console.error('Error retrieving response spreadsheet via Forms API:', error);
+                console.log("Falling back to alternative method");
+                return fetchLinkedSheets(formId);
+            });
         } else {
-            throw new Error("No linked response spreadsheet found. Please ensure your form collects responses in Google Sheets.");
+            console.log("Forms API not available, using alternative method");
+            return fetchLinkedSheets(formId);
         }
-    }).catch(error => {
-        console.error('Error retrieving response spreadsheet:', error);
-        showError('Could not retrieve the response spreadsheet. Please ensure your form has responses saved in a Google Sheet.');
-        return null;
-    });
+    } catch (error) {
+        console.error('Error accessing Forms API:', error);
+        console.log("Falling back to alternative method");
+        return fetchLinkedSheets(formId);
+    }
 }
 
 
@@ -862,210 +852,90 @@ function openFormTemplate(e) {
     window.open(templateUrl, '_blank');
 }
 
-// Function to toggle kiosk mode
-function toggleKioskMode() {
-    if (kioskModeToggle.checked) {
-        // Enable kiosk mode
-        normalModeCard.style.display = 'none';
-        kioskModeCard.style.display = 'block';
-        resultContainer.style.display = 'none';
-        localStorage.setItem('kioskMode', 'enabled');
-
-        // Transfer form URL from main form to kiosk form if available
-        if (formUrlInput.value.trim()) {
-            kioskFormUrlInput.value = formUrlInput.value;
-        }
+// Function to toggle auto-refresh
+function toggleAutoRefresh() {
+    if (autoRefreshToggle.checked) {
+        enableAutoRefresh();
     } else {
-        // Disable kiosk mode
-        normalModeCard.style.display = 'block';
-        kioskModeCard.style.display = 'none';
-        localStorage.setItem('kioskMode', 'disabled');
-
-        // Transfer form URL from kiosk form to main form if available
-        if (kioskFormUrlInput.value.trim()) {
-            formUrlInput.value = kioskFormUrlInput.value;
-        }
+        disableAutoRefresh();
     }
 }
 
-// Function to handle kiosk form submission
-function handleKioskFormSubmit(event) {
-    event.preventDefault();
+// Function to enable auto-refresh
+function enableAutoRefresh() {
+    localStorage.setItem('autoRefresh', 'enabled');
 
-    // Validate form
-    if (!kioskFormUrlInput.value.trim()) {
-        kioskFormUrlInput.classList.add('is-invalid');
-        showError('Please enter a Google Form URL.');
-        return;
+    // Only start auto-refresh if we have a current form ID
+    if (currentFormId && currentMapTitle) {
+        startAutoRefresh();
     }
-
-    // Get form values
-    const formUrl = kioskFormUrlInput.value;
-    const title = kioskTitleInput.value || 'Team Registration';
-
-    // Show loading indicator
-    qrSpinner.classList.remove('d-none');
-    generateQrBtn.disabled = true;
-
-    // Sync the form URL with the main form
-    formUrlInput.value = formUrl;
-
-    // Generate QR code
-    generateQrCode(formUrl, title);
 }
 
-// Function to generate QR code
-function generateQrCode(url, title) {
-    // Set the title
-    qrTitle.textContent = title;
-
-    // Generate QR code
-    QRCode.toCanvas(qrCanvas, url, {
-        width: 300,
-        margin: 2,
-        color: {
-            dark: '#000000',
-            light: '#ffffff'
-        }
-    }, function(error) {
-        if (error) {
-            console.error('Error generating QR code:', error);
-            showError('Failed to generate QR code: ' + error);
-        } else {
-            // Show the QR code result and hide the info alert
-            kioskForm.style.display = 'none';
-            qrResult.style.display = 'block';
-            document.querySelector('#kioskModeCard .alert-info').style.display = 'none';
-        }
-
-        // Hide loading indicator
-        qrSpinner.classList.add('d-none');
-        generateQrBtn.disabled = false;
-    });
+// Function to disable auto-refresh
+function disableAutoRefresh() {
+    localStorage.setItem('autoRefresh', 'disabled');
+    stopAutoRefresh();
 }
 
-// Function to print QR code
-function printQrCode() {
-    const printWindow = window.open('', '_blank');
+// Function to start auto-refresh
+function startAutoRefresh() {
+    // Clear any existing timer
+    stopAutoRefresh();
 
-    // Create print content
-    const printContent = `
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <title>${qrTitle.textContent} - QR Code</title>
-            <style>
-                body {
-                    font-family: Arial, sans-serif;
-                    text-align: center;
-                    padding: 20px;
-                }
-                .qr-container {
-                    margin: 30px auto;
-                    max-width: 400px;
-                }
-                h1 {
-                    margin-bottom: 20px;
-                }
-                .description {
-                    margin-bottom: 20px;
-                    font-size: 16px;
-                    color: #555;
-                }
-                .instructions {
-                    margin-top: 20px;
-                    font-size: 16px;
-                }
-                @media print {
-                    .no-print {
-                        display: none;
-                    }
-                }
-            </style>
-        </head>
-        <body>
-            <div class="qr-container">
-                <h1>${qrTitle.textContent}</h1>
-                <p class="description">Be part of our team map! Tell us where you're from.</p>
-                <img src="${qrCanvas.toDataURL('image/png')}" alt="QR Code" style="max-width: 100%;">
-                <p class="instructions">Just point your phone camera at this QR code</p>
-                <button class="no-print" onclick="window.print();return false;">Print</button>
-            </div>
-        </body>
-        </html>
+    // Get refresh interval (minimum 10 seconds)
+    const interval = Math.max(10, parseInt(refreshIntervalInput.value) || 30) * 1000;
+
+    // Set up the timer to refresh the map
+    refreshTimer = setInterval(() => {
+        refreshMap();
+    }, interval);
+
+    console.log(`Auto-refresh enabled. Refreshing every ${interval/1000} seconds.`);
+}
+
+// Function to stop auto-refresh
+function stopAutoRefresh() {
+    if (refreshTimer) {
+        clearInterval(refreshTimer);
+        refreshTimer = null;
+        console.log('Auto-refresh disabled.');
+    }
+}
+
+// Function to refresh the map
+function refreshMap() {
+    if (!currentFormId || !accessToken) return;
+
+    console.log('Refreshing map data...');
+
+    // Show a subtle loading indicator
+    const refreshIndicator = document.createElement('div');
+    refreshIndicator.className = 'alert alert-info alert-dismissible fade show';
+    refreshIndicator.innerHTML = `
+        <i class="bi bi-arrow-repeat"></i> Refreshing map data...
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
     `;
+    document.querySelector('.result-container .card-body').prepend(refreshIndicator);
 
-    // Write to the new window and trigger print
-    printWindow.document.open();
-    printWindow.document.write(printContent);
-    printWindow.document.close();
-
-    // Wait for content to load before printing
-    printWindow.onload = function() {
-        printWindow.focus();
-        printWindow.print();
-    };
+    // Process the form again with the same parameters
+    processForm(currentFormId, currentMapTitle)
+        .then(() => {
+            console.log('Map refreshed successfully.');
+            // Remove the refresh indicator
+            refreshIndicator.remove();
+        })
+        .catch(error => {
+            console.error('Error refreshing map:', error);
+            // Update the refresh indicator to show the error
+            refreshIndicator.className = 'alert alert-danger alert-dismissible fade show';
+            refreshIndicator.innerHTML = `
+                <i class="bi bi-exclamation-triangle"></i> Error refreshing map: ${error.message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            `;
+        });
 }
 
-// Function to reset kiosk form
-function resetKioskForm() {
-    kioskForm.reset();
-    kioskForm.style.display = 'block';
-    qrResult.style.display = 'none';
-    document.querySelector('#kioskModeCard .alert-info').style.display = 'block';
-}
 
-// Function to update fullscreen button icons
-function updateFullscreenButtons() {
-    const isFullscreen = document.fullscreenElement ||
-                        document.mozFullScreenElement ||
-                        document.webkitFullscreenElement ||
-                        document.msFullscreenElement;
-
-    if (isFullscreen) {
-        fullscreenBtn.innerHTML = '<i class="bi bi-fullscreen-exit"></i>';
-        if (qrFullscreenBtn) {
-            qrFullscreenBtn.innerHTML = '<i class="bi bi-fullscreen-exit"></i> Exit Fullscreen';
-        }
-    } else {
-        fullscreenBtn.innerHTML = '<i class="bi bi-fullscreen"></i>';
-        if (qrFullscreenBtn) {
-            qrFullscreenBtn.innerHTML = '<i class="bi bi-fullscreen"></i> Fullscreen';
-        }
-    }
-}
-
-// Function to toggle fullscreen mode
-function toggleFullscreen(element) {
-    // Check if fullscreen is currently active
-    if (!document.fullscreenElement &&
-        !document.mozFullScreenElement &&
-        !document.webkitFullscreenElement &&
-        !document.msFullscreenElement) {
-
-        // Request fullscreen on different browsers
-        if (element.requestFullscreen) {
-            element.requestFullscreen();
-        } else if (element.msRequestFullscreen) {
-            element.msRequestFullscreen();
-        } else if (element.mozRequestFullScreen) {
-            element.mozRequestFullScreen();
-        } else if (element.webkitRequestFullscreen) {
-            element.webkitRequestFullscreen(Element.ALLOW_KEYBOARD_INPUT);
-        }
-    } else {
-        // Exit fullscreen on different browsers
-        if (document.exitFullscreen) {
-            document.exitFullscreen();
-        } else if (document.msExitFullscreen) {
-            document.msExitFullscreen();
-        } else if (document.mozCancelFullScreen) {
-            document.mozCancelFullScreen();
-        } else if (document.webkitExitFullscreen) {
-            document.webkitExitFullscreen();
-        }
-    }
-}
 
 // Check for URL parameters on page load to handle shared maps
 window.onload = function() {
@@ -1078,10 +948,6 @@ window.onload = function() {
         // Store the form data in sessionStorage for use after authentication
         sessionStorage.setItem('pendingFormId', formId);
         sessionStorage.setItem('pendingMapTitle', mapTitle);
-
-        // Set the kiosk form URL since it doesn't require authentication
-        const formUrl = `https://docs.google.com/forms/d/${formId}`;
-        kioskFormUrlInput.value = formUrl;
 
         // If already authenticated, process the form
         if (accessToken) {
