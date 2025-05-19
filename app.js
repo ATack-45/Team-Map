@@ -24,6 +24,8 @@ let currentMapTitle = null;
 // DOM elements
 const mapForm = document.getElementById('mapForm');
 const formUrlInput = document.getElementById('formUrl');
+const formUrlDropdown = document.getElementById('formUrlDropdown');
+const formUrlDropdownBtn = document.getElementById('formUrlDropdownBtn');
 const mapTitleInput = document.getElementById('mapTitle');
 const refreshIntervalInput = document.getElementById('refreshInterval');
 const loadingDiv = document.querySelector('.loading');
@@ -40,6 +42,9 @@ const autoRefreshToggle = document.getElementById('autoRefreshToggle');
 
 // Initialize the application when the page loads
 document.addEventListener('DOMContentLoaded', initApp);
+
+// Array to store form URL history
+let formUrlHistory = [];
 
 function initApp() {
     let gapiLoaded = setInterval(() => {
@@ -63,6 +68,12 @@ function initApp() {
     // Set up auto-refresh toggle
     autoRefreshToggle.addEventListener('change', toggleAutoRefresh);
 
+    // Set up form URL dropdown
+    formUrlDropdownBtn.addEventListener('click', loadFormUrlHistory);
+
+    // Load form URL history from localStorage
+    loadFormUrlHistory();
+
     // Default to dark mode unless explicitly set to light mode
     if (localStorage.getItem('darkMode') !== 'disabled') {
         enableDarkMode();
@@ -74,6 +85,109 @@ function initApp() {
     if (localStorage.getItem('autoRefresh') === 'enabled') {
         autoRefreshToggle.checked = true;
     }
+}
+
+// Function to load form URL history from localStorage
+function loadFormUrlHistory() {
+    // Get form URL history from localStorage
+    const savedHistory = localStorage.getItem('formUrlHistory');
+    if (savedHistory) {
+        formUrlHistory = JSON.parse(savedHistory);
+        updateFormUrlDropdown();
+    }
+}
+
+// Function to update the form URL dropdown with history items
+function updateFormUrlDropdown() {
+    // Clear the dropdown
+    formUrlDropdown.innerHTML = '';
+
+    if (formUrlHistory.length === 0) {
+        // If no history, show a placeholder
+        const noHistoryItem = document.createElement('li');
+        noHistoryItem.innerHTML = '<a class="dropdown-item text-muted fst-italic" href="#">No saved forms</a>';
+        formUrlDropdown.appendChild(noHistoryItem);
+    } else {
+        // Add each history item to the dropdown
+        formUrlHistory.forEach((item, index) => {
+            const listItem = document.createElement('li');
+            const link = document.createElement('a');
+            link.className = 'dropdown-item';
+            link.href = '#';
+
+            // Extract form ID for display
+            const formId = extractFormId(item.url);
+            const displayText = item.title ? `${item.title} (${formId})` : item.url;
+
+            link.textContent = displayText;
+
+            // Add click event to select this form URL
+            link.addEventListener('click', (e) => {
+                e.preventDefault();
+                selectFormUrl(item.url, item.title);
+            });
+
+            listItem.appendChild(link);
+            formUrlDropdown.appendChild(listItem);
+        });
+
+        // Add a divider and clear history option
+        const divider = document.createElement('li');
+        divider.innerHTML = '<hr class="dropdown-divider">';
+        formUrlDropdown.appendChild(divider);
+
+        const clearItem = document.createElement('li');
+        const clearLink = document.createElement('a');
+        clearLink.className = 'dropdown-item text-danger';
+        clearLink.href = '#';
+        clearLink.innerHTML = '<i class="bi bi-trash"></i> Clear History';
+        clearLink.addEventListener('click', (e) => {
+            e.preventDefault();
+            clearFormUrlHistory();
+        });
+        clearItem.appendChild(clearLink);
+        formUrlDropdown.appendChild(clearItem);
+    }
+}
+
+// Function to select a form URL from the dropdown
+function selectFormUrl(url, title) {
+    formUrlInput.value = url;
+    if (title) {
+        mapTitleInput.value = title;
+    }
+}
+
+// Function to add a form URL to the history
+function addFormUrlToHistory(url, title) {
+    // Check if this URL is already in the history
+    const existingIndex = formUrlHistory.findIndex(item => item.url === url);
+
+    if (existingIndex !== -1) {
+        // If it exists, remove it so we can add it to the top
+        formUrlHistory.splice(existingIndex, 1);
+    }
+
+    // Add the new URL to the beginning of the array
+    formUrlHistory.unshift({ url, title });
+
+    // Limit history to 10 items
+    if (formUrlHistory.length > 10) {
+        formUrlHistory.pop();
+    }
+
+    // Save to localStorage
+    localStorage.setItem('formUrlHistory', JSON.stringify(formUrlHistory));
+
+    // Update the dropdown
+    updateFormUrlDropdown();
+}
+
+// Function to clear form URL history
+function clearFormUrlHistory() {
+    formUrlHistory = [];
+    localStorage.removeItem('formUrlHistory');
+    updateFormUrlDropdown();
 }
 
 // Function to toggle dark mode
@@ -370,6 +484,9 @@ function handleFormSubmit(event) {
     // Store the current form ID and title for auto-refresh
     currentFormId = formId;
     currentMapTitle = mapTitle;
+
+    // Add the form URL to history
+    addFormUrlToHistory(formUrl, mapTitle);
 
     // Process the form
     processForm(formId, mapTitle)
@@ -828,6 +945,9 @@ function processSharedMap(formId, mapTitle) {
     // Set form values
     formUrlInput.value = formUrl;
     mapTitleInput.value = mapTitle;
+
+    // Add to form URL history
+    addFormUrlToHistory(formUrl, mapTitle);
 
     // Submit the form to generate the map
     mapForm.dispatchEvent(new Event('submit'));
