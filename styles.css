@@ -74,8 +74,17 @@ body {
     text-overflow: ellipsis;
 }
 
+#formUrlDropdown .dropdown-header {
+    font-weight: bold;
+    color: var(--primary-color);
+}
+
 .dropdown-item.text-danger:hover {
     background-color: #f8d7da;
+}
+
+.dropdown-item.text-success:hover {
+    background-color: #d1e7dd;
 }
 
 /* Mobile responsiveness */
@@ -182,9 +191,21 @@ body.dark-mode .dropdown-item {
     color: #e0e0e0;
 }
 
+body.dark-mode .dropdown-header {
+    color: #90caf9;
+}
+
 body.dark-mode .dropdown-item:hover {
     background-color: #3a3a3a;
     color: #fff;
+}
+
+body.dark-mode .dropdown-item.text-success:hover {
+    background-color: #0d392a;
+}
+
+body.dark-mode .dropdown-item.text-danger:hover {
+    background-color: #3d1c1c;
 }
 
 body.dark-mode .dropdown-divider {

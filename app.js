@@ -43,8 +43,21 @@ const autoRefreshToggle = document.getElementById('autoRefreshToggle');
 // Initialize the application when the page loads
 document.addEventListener('DOMContentLoaded', initApp);
 
-// Array to store form URL history
-let formUrlHistory = [];
+// Predefined form URLs
+const predefinedForms = [
+    {
+        url: "https://docs.google.com/forms/d/1v5TU0vEQWMROyLuICPTWwt8U0qIV5Q0cmJHYvaIsr7w",
+        title: "2025 Vex Worlds"
+    },
+    {
+        url: "https://docs.google.com/forms/d/1xhKaDZHGb9pFlQ0V-V5KR4lGFhPeQfL_gjQuQ5S7dG8",
+        title: "Drones"
+    }
+    // Add more predefined forms here as needed
+];
+
+// Custom forms added by the user
+let customForms = [];
 
 function initApp() {
     let gapiLoaded = setInterval(() => {
@@ -69,10 +82,11 @@ function initApp() {
     autoRefreshToggle.addEventListener('change', toggleAutoRefresh);
 
     // Set up form URL dropdown
-    formUrlDropdownBtn.addEventListener('click', loadFormUrlHistory);
+    formUrlDropdownBtn.addEventListener('click', loadFormsList);
 
-    // Load form URL history from localStorage
-    loadFormUrlHistory();
+    // Load custom forms from localStorage and update dropdown
+    loadCustomForms();
+    updateFormUrlDropdown();
 
     // Default to dark mode unless explicitly set to light mode
     if (localStorage.getItem('darkMode') !== 'disabled') {
@@ -87,67 +101,135 @@ function initApp() {
     }
 }
 
-// Function to load form URL history from localStorage
-function loadFormUrlHistory() {
-    // Get form URL history from localStorage
-    const savedHistory = localStorage.getItem('formUrlHistory');
-    if (savedHistory) {
-        formUrlHistory = JSON.parse(savedHistory);
-        updateFormUrlDropdown();
+// Function to load custom forms from localStorage
+function loadCustomForms() {
+    const savedForms = localStorage.getItem('customForms');
+    if (savedForms) {
+        customForms = JSON.parse(savedForms);
     }
 }
 
-// Function to update the form URL dropdown with history items
+// Function to load the forms list
+function loadFormsList() {
+    updateFormUrlDropdown();
+}
+
+// Function to update the form URL dropdown with predefined and custom forms
 function updateFormUrlDropdown() {
     // Clear the dropdown
     formUrlDropdown.innerHTML = '';
 
-    if (formUrlHistory.length === 0) {
-        // If no history, show a placeholder
-        const noHistoryItem = document.createElement('li');
-        noHistoryItem.innerHTML = '<a class="dropdown-item text-muted fst-italic" href="#">No saved forms</a>';
-        formUrlDropdown.appendChild(noHistoryItem);
-    } else {
-        // Add each history item to the dropdown
-        formUrlHistory.forEach((item, index) => {
-            const listItem = document.createElement('li');
-            const link = document.createElement('a');
-            link.className = 'dropdown-item';
-            link.href = '#';
+    // Add predefined forms section
+    if (predefinedForms.length > 0) {
+        const predefinedHeader = document.createElement('li');
+        predefinedHeader.innerHTML = '<h6 class="dropdown-header">Predefined Forms</h6>';
+        formUrlDropdown.appendChild(predefinedHeader);
 
-            // Extract form ID for display
-            const formId = extractFormId(item.url);
-            const displayText = item.title ? `${item.title} (${formId})` : item.url;
+        // Add each predefined form
+        predefinedForms.forEach((form) => {
+            addFormToDropdown(form, false);
+        });
+    }
 
-            link.textContent = displayText;
+    // Add custom forms section if any exist
+    if (customForms.length > 0) {
+        // Add a divider if we have predefined forms
+        if (predefinedForms.length > 0) {
+            const divider = document.createElement('li');
+            divider.innerHTML = '<hr class="dropdown-divider">';
+            formUrlDropdown.appendChild(divider);
+        }
 
-            // Add click event to select this form URL
-            link.addEventListener('click', (e) => {
-                e.preventDefault();
-                selectFormUrl(item.url, item.title);
-            });
+        const customHeader = document.createElement('li');
+        customHeader.innerHTML = '<h6 class="dropdown-header">Custom Forms</h6>';
+        formUrlDropdown.appendChild(customHeader);
 
-            listItem.appendChild(link);
-            formUrlDropdown.appendChild(listItem);
+        // Add each custom form
+        customForms.forEach((form) => {
+            addFormToDropdown(form, true);
         });
 
-        // Add a divider and clear history option
+        // Add a divider before management options
         const divider = document.createElement('li');
         divider.innerHTML = '<hr class="dropdown-divider">';
         formUrlDropdown.appendChild(divider);
 
+        // Add option to clear custom forms
         const clearItem = document.createElement('li');
         const clearLink = document.createElement('a');
         clearLink.className = 'dropdown-item text-danger';
         clearLink.href = '#';
-        clearLink.innerHTML = '<i class="bi bi-trash"></i> Clear History';
+        clearLink.innerHTML = '<i class="bi bi-trash"></i> Clear Custom Forms';
         clearLink.addEventListener('click', (e) => {
             e.preventDefault();
-            clearFormUrlHistory();
+            clearCustomForms();
         });
         clearItem.appendChild(clearLink);
         formUrlDropdown.appendChild(clearItem);
+    } else if (predefinedForms.length > 0) {
+        // If we have predefined forms but no custom forms, add a divider
+        const divider = document.createElement('li');
+        divider.innerHTML = '<hr class="dropdown-divider">';
+        formUrlDropdown.appendChild(divider);
     }
+
+    // Add option to save current form
+    const saveItem = document.createElement('li');
+    const saveLink = document.createElement('a');
+    saveLink.className = 'dropdown-item text-success';
+    saveLink.href = '#';
+    saveLink.innerHTML = '<i class="bi bi-plus-circle"></i> Save Current Form';
+    saveLink.addEventListener('click', (e) => {
+        e.preventDefault();
+        saveCurrentForm();
+    });
+    saveItem.appendChild(saveLink);
+    formUrlDropdown.appendChild(saveItem);
+}
+
+// Helper function to add a form to the dropdown
+function addFormToDropdown(form, isCustom) {
+    const listItem = document.createElement('li');
+    const link = document.createElement('a');
+    link.className = 'dropdown-item';
+    link.href = '#';
+
+    // Extract form ID for display
+    const formId = extractFormId(form.url);
+    const displayText = form.title ? `${form.title} (${formId})` : form.url;
+
+    link.textContent = displayText;
+
+    // Add click event to select this form URL
+    link.addEventListener('click', (e) => {
+        e.preventDefault();
+        selectFormUrl(form.url, form.title);
+    });
+
+    // If it's a custom form, add a delete button
+    if (isCustom) {
+        const deleteBtn = document.createElement('button');
+        deleteBtn.className = 'btn btn-sm btn-link text-danger p-0 ms-2';
+        deleteBtn.innerHTML = '<i class="bi bi-x-circle"></i>';
+        deleteBtn.title = 'Remove this form';
+        deleteBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            removeCustomForm(form.url);
+        });
+
+        // Create a container for the link and delete button
+        const container = document.createElement('div');
+        container.className = 'd-flex justify-content-between align-items-center';
+        container.appendChild(document.createTextNode(displayText));
+        container.appendChild(deleteBtn);
+
+        link.innerHTML = '';
+        link.appendChild(container);
+    }
+
+    listItem.appendChild(link);
+    formUrlDropdown.appendChild(listItem);
 }
 
 // Function to select a form URL from the dropdown
@@ -158,35 +240,66 @@ function selectFormUrl(url, title) {
     }
 }
 
-// Function to add a form URL to the history
-function addFormUrlToHistory(url, title) {
-    // Check if this URL is already in the history
-    const existingIndex = formUrlHistory.findIndex(item => item.url === url);
+// Function to save the current form to custom forms
+function saveCurrentForm() {
+    const url = formUrlInput.value.trim();
+    const title = mapTitleInput.value.trim() || 'Custom Form';
 
-    if (existingIndex !== -1) {
-        // If it exists, remove it so we can add it to the top
-        formUrlHistory.splice(existingIndex, 1);
+    if (!url) {
+        showError('Please enter a Google Form URL first.');
+        return;
     }
 
-    // Add the new URL to the beginning of the array
-    formUrlHistory.unshift({ url, title });
+    const formId = extractFormId(url);
+    if (!formId) {
+        showError('Invalid Google Form URL. Please check and try again.');
+        return;
+    }
 
-    // Limit history to 10 items
-    if (formUrlHistory.length > 10) {
-        formUrlHistory.pop();
+    // Check if this URL is already in custom forms
+    const existingIndex = customForms.findIndex(form => form.url === url);
+
+    if (existingIndex !== -1) {
+        // If it exists, update the title
+        customForms[existingIndex].title = title;
+    } else {
+        // Add the new form
+        customForms.push({ url, title });
     }
 
     // Save to localStorage
-    localStorage.setItem('formUrlHistory', JSON.stringify(formUrlHistory));
+    localStorage.setItem('customForms', JSON.stringify(customForms));
 
     // Update the dropdown
     updateFormUrlDropdown();
+
+    // Show success message
+    const successDiv = document.createElement('div');
+    successDiv.className = 'alert alert-success alert-dismissible fade show';
+    successDiv.innerHTML = `
+        Form saved to your custom forms list.
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    `;
+    document.querySelector('.card-body').prepend(successDiv);
+
+    // Auto-dismiss after 3 seconds
+    setTimeout(() => {
+        const bsAlert = new bootstrap.Alert(successDiv);
+        bsAlert.close();
+    }, 3000);
 }
 
-// Function to clear form URL history
-function clearFormUrlHistory() {
-    formUrlHistory = [];
-    localStorage.removeItem('formUrlHistory');
+// Function to remove a custom form
+function removeCustomForm(url) {
+    customForms = customForms.filter(form => form.url !== url);
+    localStorage.setItem('customForms', JSON.stringify(customForms));
+    updateFormUrlDropdown();
+}
+
+// Function to clear all custom forms
+function clearCustomForms() {
+    customForms = [];
+    localStorage.removeItem('customForms');
     updateFormUrlDropdown();
 }
 
@@ -484,9 +597,6 @@ function handleFormSubmit(event) {
     // Store the current form ID and title for auto-refresh
     currentFormId = formId;
     currentMapTitle = mapTitle;
-
-    // Add the form URL to history
-    addFormUrlToHistory(formUrl, mapTitle);
 
     // Process the form
     processForm(formId, mapTitle)
@@ -945,9 +1055,6 @@ function processSharedMap(formId, mapTitle) {
     // Set form values
     formUrlInput.value = formUrl;
     mapTitleInput.value = mapTitle;
-
-    // Add to form URL history
-    addFormUrlToHistory(formUrl, mapTitle);
 
     // Submit the form to generate the map
     mapForm.dispatchEvent(new Event('submit'));
